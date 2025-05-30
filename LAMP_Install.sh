@@ -61,12 +61,12 @@ configure_firewall() {
 
 install_php() {
     echo "=== Installing PHP 7.4 and Required Modules ==="
-    if ! command -v php56 >/dev/null 2>&1; then
+    if ! command -v php >/dev/null 2>&1; then
         dnf install -y epel-release
         dnf install -y http://rpms.remirepo.net/enterprise/remi-release-9.rpm
         dnf module reset php
         dnf module enable php:remi-7.4
-        yum install php-{cli,fileinfo,gd,json,mbstring,mysqli,session,zlib,simplexml,xml,intl,domxml,ldap,openssl,xmlrpc,imap}
+        yum install php php-{cli,fileinfo,gd,json,mbstring,mysqli,session,zlib,simplexml,xml,intl,domxml,ldap,openssl,xmlrpc,imap}
 
      else
         echo "PHP 7.4 is already installed. Skipping."
