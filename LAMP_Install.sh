@@ -66,7 +66,7 @@ install_php() {
         dnf install -y http://rpms.remirepo.net/enterprise/remi-release-9.rpm
         dnf module reset php
         dnf module enable php:remi-7.4
-        yum install php php-{cli,fileinfo,gd,json,mbstring,mysqli,session,zlib,simplexml,xml,intl,domxml,ldap,openssl,xmlrpc,imap}
+        yum install php php-{cli,fileinfo,gd,json,mbstring,mysqli,mysqlnd,session,zlib,simplexml,xml,intl,domxml,ldap,openssl,xmlrpc,imap}
 
      else
         echo "PHP 7.4 is already installed. Skipping."
