@@ -64,10 +64,9 @@ install_php() {
     if ! command -v php >/dev/null 2>&1; then
         dnf install -y epel-release
         dnf install -y http://rpms.remirepo.net/enterprise/remi-release-9.rpm
-        dnf module reset php
-        dnf module enable php:remi-8.1
+        dnf module reset -y php
+        dnf module enable -y php:remi-8.1
         yum install php php-{cli,fileinfo,gd,json,mbstring,ldap,mysqli,mysqlnd,session,zlib,simplexml,xml,intl,domxml,ldap,openssl,xmlrpc,imap}
-
      else
         echo "PHP 7.4 is already installed. Skipping."
     fi
