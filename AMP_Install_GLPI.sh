@@ -61,14 +61,29 @@ configure_firewall() {
 
 install_php() {
     echo "=== Installing PHP 8.1 and Required Modules ==="
-    if ! command -v php >/dev/null 2>&1; then
+
+    CURRENT_PHP=$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo "none")
+
+    if [[ "$CURRENT_PHP" != 8.1* ]]; then
+        echo "Removing old PHP packages if any..."
+        dnf remove -y php\*
+
+        echo "Installing Remi repo..."
         dnf install -y epel-release
-        dnf install -y http://rpms.remirepo.net/enterprise/remi-release-9.rpm
+        dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+
+        echo "Resetting and enabling PHP 8.1 module..."
         dnf module reset -y php
         dnf module enable -y php:remi-8.1
-        yum install -y php php-{cli,fileinfo,gd,json,mbstring,ldap,mysqli,mysqlnd,session,zlib,simplexml,xml,intl,domxml,ldap,openssl,xmlrpc,imap}
-     else
-        echo "PHP 7.4 is already installed. Skipping."
+
+        echo "Installing PHP 8.1 and extensions..."
+        dnf install -y php php-cli php-fileinfo php-gd php-json php-mbstring \
+            php-ldap php-mysqli php-mysqlnd php-session php-zlib php-simplexml \
+            php-xml php-intl php-xmlrpc php-imap
+
+        echo "✅ PHP 8.1 installation completed."
+    else
+        echo "✅ PHP 8.1 is already installed. Skipping."
     fi
 }
 
