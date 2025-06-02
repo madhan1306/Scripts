@@ -9,15 +9,32 @@ INSTALL_APACHE=false
 INSTALL_PHP=false
 INSTALL_MARIADB=false
 ALL=false
+PHP_VERSION="8.1"  # default version
 
 # Check input arguments
 for arg in "$@"; do
     case "$arg" in
-        all) ALL=true ;;
-        apache) INSTALL_APACHE=true ;;
-        php) INSTALL_PHP=true ;;
-        mariadb) INSTALL_MARIADB=true ;;
-        *) echo "Invalid option: $arg"; echo "Usage: $0 [all|apache|php|mariadb]"; exit 1 ;;
+        all) 
+            ALL=true 
+            ;;
+        apache) 
+            INSTALL_APACHE=true 
+            ;;
+        mariadb) 
+            INSTALL_MARIADB=true 
+            ;;
+        php) 
+            INSTALL_PHP=true 
+            ;;
+        php-*) 
+            INSTALL_PHP=true
+            PHP_VERSION="${arg#php-}"  # extract version after php-
+            ;;
+        *) 
+            echo "❌ Invalid option: $arg"
+            echo "Usage: $0 [all|apache|php|php-8.1|php-7.4|mariadb]"
+            exit 1
+            ;;
     esac
 done
 
@@ -35,7 +52,7 @@ install_apache() {
         systemctl start httpd
         systemctl enable httpd
     else
-        echo "Apache is already installed. Skipping."
+        echo "✅ Apache is already installed. Skipping."
     fi
 }
 
@@ -46,25 +63,13 @@ configure_firewall() {
     firewall-cmd --reload
 }
 
-#install_php() {
-#    echo "=== Installing PHP 5.6 and Required Modules ==="
-#    if ! command -v php56 >/dev/null 2>&1; then
-#        dnf install -y epel-release
-#        dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-#        dnf install -y http://rpms.remirepo.net/enterprise/remi-release-8.rpm
-#        yum install -y php56
-#        yum install -y php56-php-{mcrypt,mbstring,openssl,bcmath,iconv,gd,mysqli,xml,fpm}
-#    else
-#        echo "PHP 5.6 is already installed. Skipping."
-#    fi
-#}
-
 install_php() {
-    echo "=== Installing PHP 8.1 and Required Modules ==="
+    local version="${1:-8.1}"
+    echo "=== Installing PHP $version and Required Modules ==="
 
     CURRENT_PHP=$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo "none")
 
-    if [[ "$CURRENT_PHP" != 8.1* ]]; then
+    if [[ "$CURRENT_PHP" != "$version"* ]]; then
         echo "Removing old PHP packages if any..."
         dnf remove -y php\*
 
@@ -72,18 +77,18 @@ install_php() {
         dnf install -y epel-release
         dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
 
-        echo "Resetting and enabling PHP 8.1 module..."
+        echo "Resetting and enabling PHP $version module..."
         dnf module reset -y php
-        dnf module enable -y php:remi-8.1
+        dnf module enable -y php:remi-${version}
 
-        echo "Installing PHP 8.1 and extensions..."
+        echo "Installing PHP $version and extensions..."
         dnf install -y php php-cli php-fileinfo php-gd php-json php-mbstring \
             php-ldap php-mysqli php-mysqlnd php-session php-zlib php-simplexml \
             php-xml php-intl php-xmlrpc php-imap
 
-        echo "✅ PHP 8.1 installation completed."
+        echo "✅ PHP $version installation completed."
     else
-        echo "✅ PHP 8.1 is already installed. Skipping."
+        echo "✅ PHP $version is already installed. Skipping."
     fi
 }
 
@@ -94,7 +99,7 @@ install_mariadb() {
         systemctl start mariadb
         systemctl enable mariadb
     else
-        echo "MariaDB Server is already installed. Skipping."
+        echo "✅ MariaDB Server is already installed. Skipping."
     fi
 
     echo "=== Securing MariaDB and Creating Database '${DB_NAME}' ==="
@@ -115,8 +120,8 @@ EOF
 $INSTALL_APACHE && install_apache
 $INSTALL_APACHE && configure_firewall
 
-$INSTALL_PHP && install_php
+$INSTALL_PHP && install_php "$PHP_VERSION"
 
 $INSTALL_MARIADB && install_mariadb
 
-echo "=== Setup Complete ==="
+echo "=== ✅ Setup Complete ==="
