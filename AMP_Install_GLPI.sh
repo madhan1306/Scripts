@@ -84,7 +84,7 @@ install_php() {
         echo "Installing PHP $version and extensions..."
         dnf install -y php php-cli php-fileinfo php-gd php-json php-mbstring \
             php-ldap php-mysqli php-mysqlnd php-session php-zlib php-simplexml \
-            php-xml php-intl php-xmlrpc php-imap php-bcmath
+            php-xml php-intl php-xmlrpc php-imap php-bcmath php-gmp
 
         echo "✅ PHP $version installation completed."
     else
