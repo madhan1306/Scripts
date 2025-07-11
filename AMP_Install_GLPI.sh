@@ -1,58 +1,62 @@
 #!/bin/bash
 
-# Set your own values here
+# ===== Basic Config =====
 MYSQL_ROOT_PASSWORD='Admin@121'
 DB_NAME="fhlp"
 
-# Flags for which components to install
 INSTALL_APACHE=false
 INSTALL_PHP=false
 INSTALL_MARIADB=false
-ALL=false
-PHP_VERSION="8.1"  # default version
+PHP_VERSION="8.1"
 
-# Check input arguments
-for arg in "$@"; do
-    case "$arg" in
-        all) 
-            ALL=true 
-            ;;
-        apache) 
-            INSTALL_APACHE=true 
-            ;;
-        mariadb) 
-            INSTALL_MARIADB=true 
-            ;;
-        php) 
-            INSTALL_PHP=true 
-            ;;
-        php-*) 
-            INSTALL_PHP=true
-            PHP_VERSION="${arg#php-}"  # extract version after php-
-            ;;
-        *) 
-            echo "❌ Invalid option: $arg"
-            echo "Usage: $0 [all|apache|php|php-8.1|php-7.4|mariadb]"
-            exit 1
-            ;;
-    esac
-done
+# ===== Prompt for User Selection =====
+echo "========== AMP Stack Installer =========="
+echo "1) Install All (Apache + PHP + MariaDB)"
+echo "2) Choose components manually"
+read -rp "Select an option [1-2]: " INSTALL_OPTION
 
-# If no specific argument is passed, install all
-if [ "$ALL" = true ] || (! $INSTALL_APACHE && ! $INSTALL_PHP && ! $INSTALL_MARIADB); then
+if [[ "$INSTALL_OPTION" == "1" ]]; then
     INSTALL_APACHE=true
     INSTALL_PHP=true
     INSTALL_MARIADB=true
+elif [[ "$INSTALL_OPTION" == "2" ]]; then
+    read -rp "Install Apache? [y/n]: " ans
+    [[ "$ans" == [Yy]* ]] && INSTALL_APACHE=true
+
+    read -rp "Install PHP? [y/n]: " ans
+    if [[ "$ans" == [Yy]* ]]; then
+        INSTALL_PHP=true
+        echo "Select PHP version:"
+        echo "1) 5.6"
+        echo "2) 7.4"
+        echo "3) 8.1"
+        echo "4) 8.2"
+        read -rp "Choose PHP version [1-4]: " PHP_OPT
+        case "$PHP_OPT" in
+            1) PHP_VERSION="5.6" ;;
+            2) PHP_VERSION="7.4" ;;
+            3) PHP_VERSION="8.1" ;;
+            4) PHP_VERSION="8.2" ;;
+            *) echo "Invalid selection. Defaulting to 8.1"; PHP_VERSION="8.1" ;;
+        esac
+    fi
+
+    read -rp "Install MariaDB? [y/n]: " ans
+    [[ "$ans" == [Yy]* ]] && INSTALL_MARIADB=true
+else
+    echo "❌ Invalid input. Exiting."
+    exit 1
 fi
+
+# ===== Functions =====
 
 install_apache() {
     echo "=== Installing Apache ==="
-    if ! rpm -q httpd > /dev/null 2>&1; then
+    if ! rpm -q httpd >/dev/null 2>&1; then
         yum install -y httpd
-        systemctl start httpd
-        systemctl enable httpd
+        systemctl enable --now httpd
     else
-        echo "✅ Apache is already installed. Skipping."
+        echo "✅ Apache already installed."
     fi
 }
 
@@ -65,44 +69,39 @@ configure_firewall() {
 
 install_php() {
     local version="${1:-8.1}"
-    echo "=== Installing PHP $version and Required Modules ==="
+    echo "=== Installing PHP $version ==="
 
-    CURRENT_PHP=$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo "none")
+    echo "➡ Removing old PHP packages and repos..."
+    dnf remove -y php\* >/dev/null 2>&1
+    dnf remove -y remi-release epel-release >/dev/null 2>&1
 
-    if [[ "$CURRENT_PHP" != "$version"* ]]; then
-        echo "Removing old PHP packages if any..."
-        dnf remove -y php\*
+    echo "➡ Installing required repositories..."
+    dnf install -y epel-release
+    dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
 
-        echo "Installing Remi repo..."
-        dnf install -y epel-release
-        dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+    echo "➡ Resetting and enabling Remi PHP $version..."
+    dnf module reset -y php
+    dnf module enable -y php:remi-${version}
 
-        echo "Resetting and enabling PHP $version module..."
-        dnf module reset -y php
-        dnf module enable -y php:remi-${version}
+    echo "➡ Installing PHP $version and common extensions..."
+    dnf install -y php php-cli php-fileinfo php-gd php-json php-mbstring \
+        php-ldap php-mysqli php-mysqlnd php-session php-zlib php-simplexml \
+        php-xml php-intl php-xmlrpc php-imap php-bcmath php-gmp
 
-        echo "Installing PHP $version and extensions..."
-        dnf install -y php php-cli php-fileinfo php-gd php-json php-mbstring \
-            php-ldap php-mysqli php-mysqlnd php-session php-zlib php-simplexml \
-            php-xml php-intl php-xmlrpc php-imap php-bcmath php-gmp
-
-        echo "✅ PHP $version installation completed."
-    else
-        echo "✅ PHP $version is already installed. Skipping."
-    fi
+    php -v
+    echo "✅ PHP $version installed successfully."
 }
 
 install_mariadb() {
-    echo "=== Installing MariaDB Server ==="
-    if ! rpm -q mariadb-server > /dev/null 2>&1; then
+    echo "=== Installing MariaDB ==="
+    if ! rpm -q mariadb-server >/dev/null 2>&1; then
         yum install -y mariadb-server
-        systemctl start mariadb
-        systemctl enable mariadb
+        systemctl enable --now mariadb
     else
-        echo "✅ MariaDB Server is already installed. Skipping."
+        echo "✅ MariaDB already installed."
     fi
 
-    echo "=== Securing MariaDB and Creating Database '${DB_NAME}' ==="
+    echo "➡ Securing MariaDB and setting up database..."
     mysql -u root <<EOF
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 DELETE FROM mysql.user WHERE User='';
@@ -114,14 +113,14 @@ FLUSH PRIVILEGES;
 EOF
 
     mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+    echo "✅ MariaDB database '${DB_NAME}' created."
 }
 
-# Execution
+# ===== Execute Steps =====
+
 $INSTALL_APACHE && install_apache
 $INSTALL_APACHE && configure_firewall
-
 $INSTALL_PHP && install_php "$PHP_VERSION"
-
 $INSTALL_MARIADB && install_mariadb
 
-echo "=== ✅ Setup Complete ==="
+echo "=== ✅ AMP Setup Completed ==="
