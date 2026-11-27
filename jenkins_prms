@@ -1,0 +1,84 @@
+
+properties([
+    parameters([
+        gitParameter(branch: '',
+                     branchFilter: 'origin/(Release.*)',
+                     defaultValue: 'main',
+                     description: '',
+                     name: 'BRANCH',
+                     quickFilterEnabled: false,
+                     selectedValue: 'TOP',
+                     sortMode: 'NONE',
+                     tagFilter: '*',
+                     type: 'PT_BRANCH')
+    ])
+])
+
+node('prod_prms'){
+	stage (' Cloning the project from Git'){
+	   cleanWs()
+	   git branch: "${params.BRANCH}", credentialsId: 'commiter', url: 'https://git-codecommit.ap-south-1.amazonaws.com/v1/repos/PRMS-2.0'
+
+	    }
+	    
+	    stage ('Build'){
+	    
+	    sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/CloudConfigServer_Management/cloud-config-server/pom.xml clean install'
+        sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/CloudConfigServer_Management/cloud-config-server/target/cloud-config-server-0.0.1-SNAPSHOT.jar -t  config_server:0.0.1 .'
+	    
+	     sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/ServiceRegistry_Management/service-registry/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/ServiceRegistry_Management/service-registry/target/service-registry-0.0.1-SNAPSHOT.jar -t  service_registry:0.0.1 .'
+      
+	     sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/API_Gateway_Management/api-gateway/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/API_Gateway_Management/api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar -t  api_gateway:0.0.1 .'
+      
+		 sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/AppConstant_Management/appconstant/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/AppConstant_Management/appconstant/target/appconstants-0.0.1-SNAPSHOT.jar -t  appconstants:0.0.1 .'
+        
+  	     sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Role_Management/role-management/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Role_Management/role-management/target/role-management-0.0.1-SNAPSHOT.jar -t  role_management:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Department_Management/department/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Department_Management/department/target/department-0.0.1-SNAPSHOT.jar -t  department:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Project_Resource_Allocation/resource-allocation/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Project_Resource_Allocation/resource-allocation/target/resource-allocation.jar -t  resourceallocation:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Client_Management/client-service/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Client_Management/client-service/target/client-service-0.0.1-SNAPSHOT.jar -t  client:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Project_Management/project/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Project_Management/project/target/project-0.0.1-SNAPSHOT.jar  -t  project:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Project_Deliverables/project-deliverables/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Project_Deliverables/project-deliverables/target/project-deliverable-0.0.1-SNAPSHOT.jar -t  projectdeliverable:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Skill_Management/skill/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Skill_Management/skill/target/skill-0.0.1-SNAPSHOT.jar -t  skill:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Authentication_Management/authentication/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Authentication_Management/authentication/target/authentication-0.0.1-SNAPSHOT.jar -t  authentication:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Login_Management/auth-service/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Login_Management/auth-service/target/auth-service-0.0.1-SNAPSHOT.jar -t  authservice:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Location_Management/location/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Location_Management/location/target/location-0.0.1-SNAPSHOT.jar -t  location:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/SOW_Management/sow-service/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/SOW_Management/sow-service/target/sow-service-0.0.1-SNAPSHOT.jar -t  sowservice:0.0.1 .'
+        
+         sh 'mvn -f /home/jenkins/workspace/PROD/prod_prms/Services/SourceCode/Reports_Management/supervisor-reports/pom.xml clean install'
+         sh 'sudo docker build -f Docker_Configuration/Dockerfile --build-arg JAR_FILE=Services/SourceCode/Reports_Management/supervisor-reports/target/supervisor-reports-0.0.1-SNAPSHOT.jar -t  supervisorreport:0.0.1 .'
+
+  	       dir('/home/jenkins/workspace/PROD/prod_prms/UI') {
+                 sh 'sudo npm install --force'
+  	       }
+  	    
+  	    sh 'sudo docker build -f /home/jenkins/workspace/PROD/prod_prms/UI/Docker_configuration/Dockerfile -t ui_angular_service:latest .'
+		 
+  	 sh 'sudo docker-compose -f Docker_Configuration/docker-compose.yml up -d'
+	
+	}
+		 
+}
