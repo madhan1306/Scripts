@@ -1,0 +1,53 @@
+$taskName = "HRM_Biomatrix_current_Date"
+$task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+
+# 1. Check if task exists
+if (!$task) {
+    Write-Output "CRITICAL - Task '$taskName' not found"
+    exit 2
+}
+
+# 2. Get Task Info (contains LastRunTime and LastTaskResult)
+$taskInfo = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction SilentlyContinue
+
+if (!$taskInfo) {
+    Write-Output "UNKNOWN - Could not retrieve task info"
+    exit 3
+}
+
+$lastRunTime = $taskInfo.LastRunTime
+$lastResult = $taskInfo.LastTaskResult
+
+# 3. Calculate how long ago the task ran
+$timeSinceLastRun = (Get-Date) - $lastRunTime
+
+# Keep this decimal for the math logic
+$hoursSinceLastRun = $timeSinceLastRun.TotalHours 
+
+# Create friendly variables for the text output
+$displayHours = $timeSinceLastRun.Hours
+$displayMins = $timeSinceLastRun.Minutes
+$friendlyTime = "$displayHours hrs $displayMins mins"
+
+# Set your threshold
+$maxHoursAllowed = 1.5
+
+# 4. Evaluate the conditions for Nagios
+if ($hoursSinceLastRun -gt $maxHoursAllowed) {
+    Write-Output "CRITICAL - Task is STALE. Hasn't run in $friendlyTime. Last run: $lastRunTime"
+    exit 2
+}
+elseif ($lastResult -ne 0) {
+    Write-Output "WARNING - Task ran at $lastRunTime but returned a failure code: $lastResult"
+    exit 1
+}
+elseif ($task.State -eq "Ready" -or $task.State -eq "Running") {
+    # Replaced the "|" with a "-" here
+    Write-Output "OK - State: $($task.State) - Last Run: $lastRunTime ($friendlyTime ago)"
+    exit 0
+}
+else {
+    # Replaced the "|" with a "-" here
+    Write-Output "CRITICAL - State: $($task.State) - Last Run: $lastRunTime ($friendlyTime ago)"
+    exit 2
+}
